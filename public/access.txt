@@ -1,0 +1,8 @@
+superadmin
+superadmin@carbuy.com
+password: superadmin@93889
+
+
+user
+hamza@gmail.com
+password: 1234
