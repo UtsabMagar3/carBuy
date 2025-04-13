@@ -4,22 +4,22 @@ require '../includes/connectionpage.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    $_SESSION['error'] = 'Please log in to view your profile.';
+    $_SESSION['errorMessage'] = 'Please log in to view your profile.';
     header('Location: /user/login.php');
     exit();
 }
 
 // Handle account deletion
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
-    if (isset($_POST['confirm_delete']) && $_POST['confirm_delete'] === 'yes') {
-        $deleteQuery = $datapageConnection->prepare('DELETE FROM users WHERE id = :id');
-        if ($deleteQuery->execute(['id' => $_SESSION['user_id']])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['deleteAccount'])) {
+    if (isset($_POST['confirmDeletion']) && $_POST['confirmDeletion'] === 'yes') {
+        $deleteUserQuery = $datapageConnection->prepare('DELETE FROM users WHERE id = :id');
+        if ($deleteUserQuery->execute(['id' => $_SESSION['user_id']])) {
             // Store success message in session
-            $_SESSION['success'] = 'Your account has been successfully deleted.';
+            $_SESSION['successMessage'] = 'Your account has been successfully deleted.';
             // Clear all session data except success message
-            $successMessage = $_SESSION['success'];
+            $accountDeletionMessage = $_SESSION['successMessage'];
             session_unset();
-            $_SESSION['success'] = $successMessage;
+            $_SESSION['successMessage'] = $accountDeletionMessage;
             // Write and close session
             session_write_close();
             header('Location: /index.php');
@@ -29,10 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_account'])) {
 }
 
 // Get user details from database
-$stmt = $datapageConnection->prepare('SELECT * FROM users WHERE id = :id');
-$stmt->execute(['id' => $_SESSION['user_id']]);
-$user = $stmt->fetch();
+$userDetailsQuery = $datapageConnection->prepare('SELECT * FROM users WHERE id = :id');
+$userDetailsQuery->execute(['id' => $_SESSION['user_id']]);
+$userData = $userDetailsQuery->fetch();
 
+$pageTitle = 'My Profile';
 require '../includes/header.php';
 ?>
 
@@ -42,14 +43,14 @@ require '../includes/header.php';
         <a href="/index.php" class="back-button">Back to Home</a>
     </div>
     
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="success-message"><?= htmlspecialchars($_SESSION['success']) ?></div>
-        <?php unset($_SESSION['success']); ?>
+    <?php if (isset($_SESSION['successMessage'])): ?>
+        <div class="success-message"><?= htmlspecialchars($_SESSION['successMessage']) ?></div>
+        <?php unset($_SESSION['successMessage']); ?>
     <?php endif; ?>
 
-    <?php if (isset($_SESSION['error'])): ?>
-        <div class="error-message"><?= htmlspecialchars($_SESSION['error']) ?></div>
-        <?php unset($_SESSION['error']); ?>
+    <?php if (isset($_SESSION['errorMessage'])): ?>
+        <div class="error-message"><?= htmlspecialchars($_SESSION['errorMessage']) ?></div>
+        <?php unset($_SESSION['errorMessage']); ?>
     <?php endif; ?>
     
     <section class="user-info">
@@ -70,8 +71,8 @@ require '../includes/header.php';
                 <button type="submit" class="logout-button">Logout</button>
             </form>
             <form method="POST" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
-                <input type="hidden" name="confirm_delete" value="yes">
-                <button type="submit" name="delete_account" class="delete-button">Delete Account</button>
+                <input type="hidden" name="confirmDeletion" value="yes">
+                <button type="submit" name="deleteAccount" class="delete-button">Delete Account</button>
             </form>
         </div>
     </section>

@@ -10,65 +10,65 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$errorMessage = '';
-$successMessage = '';
+$errorNotification = '';
+$successNotification = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title']);
-    $description = trim($_POST['description']);
-    $categoryId = filter_var($_POST['category'], FILTER_VALIDATE_INT);
-    $endDate = $_POST['endDate'];
-    $userId = $_SESSION['user_id'];
+    $auctionTitle = trim($_POST['title']);
+    $auctionDescription = trim($_POST['description']);
+    $auctionCategoryId = filter_var($_POST['category'], FILTER_VALIDATE_INT);
+    $auctionEndDate = $_POST['endDate'];
+    $sellerIdentifier = $_SESSION['user_id'];
     
     // Validate inputs
-    if (empty($title) || empty($description) || empty($categoryId) || empty($endDate)) {
-        $errorMessage = 'All fields are required.';
-    } elseif (strtotime($endDate) <= time()) {
-        $errorMessage = 'End date must be in the future.';
+    if (empty($auctionTitle) || empty($auctionDescription) || empty($auctionCategoryId) || empty($auctionEndDate)) {
+        $errorNotification = 'All fields are required.';
+    } elseif (strtotime($auctionEndDate) <= time()) {
+        $errorNotification = 'End date must be in the future.';
     } else {
         // Handle image upload
-        $imagePath = null;
+        $auctionImagePath = null;
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-            $maxSize = 5 * 1024 * 1024; // 5MB
+            $allowedFileTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            $maxFileSize = 5 * 1024 * 1024; // 5MB
             
-            if (!in_array($_FILES['image']['type'], $allowedTypes)) {
-                $errorMessage = 'Invalid file type. Only JPG, PNG and GIF allowed.';
-            } elseif ($_FILES['image']['size'] > $maxSize) {
-                $errorMessage = 'File too large. Maximum size is 5MB.';
+            if (!in_array($_FILES['image']['type'], $allowedFileTypes)) {
+                $errorNotification = 'Invalid file type. Only JPG, PNG and GIF allowed.';
+            } elseif ($_FILES['image']['size'] > $maxFileSize) {
+                $errorNotification = 'File too large. Maximum size is 5MB.';
             } else {
-                $uploadDir = '../uploads/';
-                if (!file_exists($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
+                $uploadDirectory = '../uploads/';
+                if (!file_exists($uploadDirectory)) {
+                    mkdir($uploadDirectory, 0777, true);
                 }
                 
-                $fileName = uniqid() . '_' . basename($_FILES['image']['name']);
-                $imagePath = $uploadDir . $fileName;
+                $imageFileName = uniqid() . '_' . basename($_FILES['image']['name']);
+                $auctionImagePath = $uploadDirectory . $imageFileName;
                 
-                if (!move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
-                    $errorMessage = 'Failed to upload image.';
-                    $imagePath = null;
+                if (!move_uploaded_file($_FILES['image']['tmp_name'], $auctionImagePath)) {
+                    $errorNotification = 'Failed to upload image.';
+                    $auctionImagePath = null;
                 }
             }
         }
 
-        if (empty($errorMessage)) {
+        if (empty($errorNotification)) {
             try {
-                $insertAuction = $datapageConnection->prepare('
+                $insertAuctionQuery = $datapageConnection->prepare('
                     INSERT INTO auctions (title, description, categoryId, userId, endDate, image) 
                     VALUES (:title, :description, :categoryId, :userId, :endDate, :image)
                 ');
                 
-                $values = [
-                    'title' => $title,
-                    'description' => $description,
-                    'categoryId' => $categoryId,
-                    'userId' => $userId,
-                    'endDate' => $endDate,
-                    'image' => $imagePath
+                $auctionValues = [
+                    'title' => $auctionTitle,
+                    'description' => $auctionDescription,
+                    'categoryId' => $auctionCategoryId,
+                    'userId' => $sellerIdentifier,
+                    'endDate' => $auctionEndDate,
+                    'image' => $auctionImagePath
                 ];
 
-                if ($insertAuction->execute($values)) {
+                if ($insertAuctionQuery->execute($auctionValues)) {
                     $_SESSION['success'] = 'Auction added successfully.';
                     if ($redirectPage === 'myauctions') {
                         header('Location: myAuctions.php');
@@ -77,42 +77,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     exit();
                 } else {
-                    $errorMessage = 'Failed to add auction.';
+                    $errorNotification = 'Failed to add auction.';
                 }
-            } catch (PDOException $e) {
-                $errorMessage = 'Database error: ' . $e->getMessage();
+            } catch (PDOException $databaseException) {
+                $errorNotification = 'Database error: ' . $databaseException->getMessage();
             }
         }
     }
 }
 
 // Fetch categories
-$stmt = $datapageConnection->query('SELECT id, name FROM categories ORDER BY name');
-$categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$categoriesQuery = $datapageConnection->query('SELECT id, name FROM categories ORDER BY name');
+$categoriesList = $categoriesQuery->fetchAll(PDO::FETCH_ASSOC);
 
+$pageTitle = 'Add Auction';
 require __DIR__ . '/../includes/header.php';
 ?>
 
-<main class="add-auction-page">
-    <div class="dashboard-header">
+<main>
+    <div>
         <h1>Add New Auction</h1>
         <?php 
         $backUrl = isset($_GET['from']) && $_GET['from'] === 'index' ? '/index.php' : '/user/myAuctions.php';
         $backText = 'Back';
         ?>
-        <a href="<?= $backUrl ?>" class="back-button"><?= $backText ?></a>
+        <a href="<?= $backUrl ?>"><?= $backText ?></a>
     </div>
 
-    <?php if ($errorMessage): ?>
-        <div class="error-message"><?= htmlspecialchars($errorMessage) ?></div>
+    <?php if ($errorNotification): ?>
+        <div><?= htmlspecialchars($errorNotification) ?></div>
     <?php endif; ?>
 
     <form action="addAuction.php<?= isset($_GET['from']) ? '?from=' . htmlspecialchars($_GET['from']) : '' ?>" 
           method="POST" 
-          enctype="multipart/form-data" 
-          class="auction-form">
-        <div class="form-grid">
-            <div class="form-group">
+          enctype="multipart/form-data">
+        <div>
+            <div>
                 <label for="title">Title</label>
                 <input type="text" id="title" name="title" 
                        value="<?= isset($_POST['title']) ? htmlspecialchars($_POST['title']) : '' ?>" 
@@ -120,11 +120,11 @@ require __DIR__ . '/../includes/header.php';
                        required>
             </div>
 
-            <div class="form-group">
+            <div>
                 <label for="category">Category</label>
                 <select id="category" name="category" required>
                     <option value="">Select a category</option>
-                    <?php foreach ($categories as $category): ?>
+                    <?php foreach ($categoriesList as $category): ?>
                         <option value="<?= $category['id'] ?>" 
                             <?= isset($_POST['category']) && $_POST['category'] == $category['id'] ? 'selected' : '' ?>>
                             <?= htmlspecialchars($category['name']) ?>
@@ -133,14 +133,14 @@ require __DIR__ . '/../includes/header.php';
                 </select>
             </div>
 
-            <div class="form-group full-width">
+            <div>
                 <label for="description">Description</label>
                 <textarea id="description" name="description" 
                           placeholder="Enter detailed description of the car"
                           required><?= isset($_POST['description']) ? htmlspecialchars($_POST['description']) : '' ?></textarea>
             </div>
 
-            <div class="form-group">
+            <div>
                 <label for="endDate">End Date</label>
                 <input type="datetime-local" id="endDate" name="endDate" 
                        min="<?= date('Y-m-d\TH:i') ?>" 
@@ -148,20 +148,20 @@ require __DIR__ . '/../includes/header.php';
                        required>
             </div>
 
-            <div class="form-group">
+            <div>
                 <label for="image">Car Image</label>
                 <input type="file" id="image" name="image" accept="image/*">
                 <small>Max file size: 5MB. Allowed types: JPG, PNG, GIF</small>
             </div>
         </div>
 
-        <div class="form-buttons">
-            <button type="submit" class="submit-button">Add Auction</button>
+        <div>
+            <button type="submit">Add Auction</button>
             <?php 
             // Set cancel button URL based on where user came from
             $cancelUrl = isset($_GET['from']) && $_GET['from'] === 'index' ? '/index.php' : '/user/myAuctions.php';
             ?>
-            <a href="<?= $cancelUrl ?>" class="cancel-button">Cancel</a>
+            <a href="<?= $cancelUrl ?>">Cancel</a>
         </div>
     </form>
 </main>

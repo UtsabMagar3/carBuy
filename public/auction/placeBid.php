@@ -5,7 +5,7 @@ require '../includes/connectionpage.php';
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
     // Tell the user they need to log in
-    $_SESSION['error'] = 'You need to log in to bid!';
+    $_SESSION['errorMessage'] = 'You need to log in to place a bid on this auction.';
     header('Location: /user/login.php');
     exit();
 }
@@ -13,86 +13,86 @@ if (!isset($_SESSION['user_id'])) {
 // Only run this code if the form was submitted
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Get the auction ID and bid amount from the form
-    $auction_id = $_POST['auction_id'];
-    $bid_amount = $_POST['bid_amount'];
-    $user_id = $_SESSION['user_id'];
+    $auctionIdentifier = $_POST['auction_id'];
+    $bidAmount = $_POST['bid_amount'];
+    $userIdentifier = $_SESSION['user_id'];
 
     // Make sure the auction ID and bid amount are numbers
-    if (!is_numeric($auction_id) || !is_numeric($bid_amount)) {
-        $_SESSION['error'] = 'The auction ID or bid amount isn’t right.';
-        header("Location: /auction/auction.php?id=$auction_id");
+    if (!is_numeric($auctionIdentifier) || !is_numeric($bidAmount)) {
+        $_SESSION['errorMessage'] = 'Invalid auction identifier or bid amount format.';
+        header("Location: /auction/auction.php?id=$auctionIdentifier");
         exit();
     }
 
     // Turn them into numbers to be safe
-    $auction_id = (int)$auction_id;
-    $bid_amount = (float)$bid_amount;
+    $auctionIdentifier = (int)$auctionIdentifier;
+    $bidAmount = (float)$bidAmount;
 
     // Check if the bid amount is positive
-    if ($bid_amount <= 0) {
+    if ($bidAmount <= 0) {
         // Tell the user their bid is too low
-        $_SESSION['error'] = 'Your bid must be more than zero.';
-        header("Location: /auction/auction.php?id=$auction_id");
+        $_SESSION['errorMessage'] = 'Your bid amount must be greater than zero.';
+        header("Location: /auction/auction.php?id=$auctionIdentifier");
         exit();
     }
 
     // Look up the auction in the database
-    $query = $datapageConnection->prepare('
+    $auctionQuery = $datapageConnection->prepare('
         SELECT userId, (SELECT MAX(bidAmount) FROM bids WHERE auctionId = ?) AS highest_bid
         FROM auctions
         WHERE id = ?
     ');
-    $query->execute([$auction_id, $auction_id]);
-    $auction = $query->fetch();
+    $auctionQuery->execute([$auctionIdentifier, $auctionIdentifier]);
+    $auctionData = $auctionQuery->fetch();
 
     // Check if we found the auction
-    if (!$auction) {
-        // Tell the user the auction doesn’t exist
-        $_SESSION['error'] = 'That auction isn’t available.';
+    if (!$auctionData) {
+        // Tell the user the auction doesn't exist
+        $_SESSION['errorMessage'] = 'The requested auction is not available.';
         header('Location: /index.php');
         exit();
     }
 
-    // Get the highest bid, or use 0 if there’s none
-    $highest_bid = $auction['highest_bid'];
-    if ($highest_bid == null) {
-        $highest_bid = 0;
+    // Get the highest bid, or use 0 if there's none
+    $highestExistingBid = $auctionData['highest_bid'];
+    if ($highestExistingBid == null) {
+        $highestExistingBid = 0;
     }
 
     // Make sure the bid is higher than the current highest
-    if ($bid_amount <= $highest_bid) {
+    if ($bidAmount <= $highestExistingBid) {
         // Tell the user their bid needs to be higher
-        $_SESSION['error'] = 'Your bid must be bigger than the current bid.';
-        header("Location: /auction/auction.php?id=$auction_id");
+        $_SESSION['errorMessage'] = 'Your bid must be higher than the current highest bid.';
+        header("Location: /auction/auction.php?id=$auctionIdentifier");
         exit();
     }
 
     // Check if the user owns the auction
-    if ($user_id == $auction['userId']) {
-        // Tell the user they can’t bid on their own auction
-        $_SESSION['error'] = 'You can’t bid on your own auction!';
-        header("Location: /auction/auction.php?id=$auction_id");
+    if ($userIdentifier == $auctionData['userId']) {
+        // Tell the user they can't bid on their own auction
+        $_SESSION['errorMessage'] = 'You cannot bid on your own auction listing.';
+        header("Location: /auction/auction.php?id=$auctionIdentifier");
         exit();
     }
 
     // Save the new bid to the database
-    $bid_query = $datapageConnection->prepare('
+    $bidInsertQuery = $datapageConnection->prepare('
         INSERT INTO bids (auctionId, userId, bidAmount, bidTime)
         VALUES (?, ?, ?, NOW())
     ');
-    $bid_query->execute([$auction_id, $user_id, $bid_amount]);
+    $bidInsertQuery->execute([$auctionIdentifier, $userIdentifier, $bidAmount]);
 
     // Check if the bid was saved
-    if ($bid_query->rowCount() > 0) {
+    if ($bidInsertQuery->rowCount() > 0) {
         // Tell the user their bid worked
-        $_SESSION['success'] = 'Your bid was placed!';
+        $_SESSION['successMessage'] = 'Your bid has been successfully placed!';
     } else {
         // Tell the user something went wrong
-        $_SESSION['error'] = 'Sorry, we couldn’t save your bid.';
+        $_SESSION['errorMessage'] = 'Sorry, we encountered an error while processing your bid.';
     }
 
     // Go back to the auction page
-    header("Location: /auction/auction.php?id=$auction_id");
+    header("Location: /auction/auction.php?id=$auctionIdentifier");
     exit();
 }
 ?>

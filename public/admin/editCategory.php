@@ -8,92 +8,87 @@ if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     exit();
 }
 
-$errorMessage = '';
-$successMessage = '';
+$errorNotification = '';
+$successNotification = '';
 
 // Get category ID from URL
-$categoryId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$categoryIdentifier = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 // If form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name']);
+    $categoryName = trim($_POST['categoryName']);
     
-    if (empty($name)) {
-        $errorMessage = "Category name is required.";
+    if (empty($categoryName)) {
+        $errorNotification = "Category name is required.";
     } else {
         // Check if category name already exists (excluding current category)
-        $checkCategory = $datapageConnection->prepare('
+        $categoryExistsCheck = $datapageConnection->prepare('
             SELECT id FROM categories 
             WHERE name = :name AND id != :id
         ');
-        $checkCategory->execute([
-            'name' => $name,
-            'id' => $categoryId
+        $categoryExistsCheck->execute([
+            'name' => $categoryName,
+            'id' => $categoryIdentifier
         ]);
         
-        if ($checkCategory->rowCount() > 0) {
-            $errorMessage = "Category name already exists.";
+        if ($categoryExistsCheck->rowCount() > 0) {
+            $errorNotification = "This category name already exists. Please choose a different name.";
         } else {
-            $stmt = $datapageConnection->prepare('
+            $categoryUpdateQuery = $datapageConnection->prepare('
                 UPDATE categories 
                 SET name = :name 
                 WHERE id = :id
             ');
             
-            if ($stmt->execute(['name' => $name, 'id' => $categoryId])) {
-                $successMessage = "Category updated successfully.";
+            if ($categoryUpdateQuery->execute(['name' => $categoryName, 'id' => $categoryIdentifier])) {
+                $_SESSION['success'] = "The category has been updated successfully.";
+                header('Location: adminCategories.php');
+                exit();
             } else {
-                $errorMessage = "Failed to update category.";
+                $errorNotification = "We couldn't update the category due to a system error.";
             }
         }
     }
 }
 
 // Fetch category details
-$stmt = $datapageConnection->prepare('SELECT * FROM categories WHERE id = :id');
-$stmt->execute(['id' => $categoryId]);
-$category = $stmt->fetch(PDO::FETCH_ASSOC);
+$categoryInformation = $datapageConnection->prepare('SELECT * FROM categories WHERE id = :id');
+$categoryInformation->execute(['id' => $categoryIdentifier]);
+$categoryData = $categoryInformation->fetch(PDO::FETCH_ASSOC);
 
 // If category doesn't exist, redirect to categories list
-if (!$category) {
+if (!$categoryData) {
     header('Location: adminCategories.php');
     exit();
 }
+
+$pageTitle = 'Edit Category - Admin Dashboard';
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Category - Admin Dashboard</title>
-    <link rel="stylesheet" href="/css/carbuy.css">
-</head>
-<body>
-    <?php require __DIR__ . '/../includes/header.php'; ?>
+<?php require __DIR__ . '/../includes/header.php'; ?>
     
-    <main>
+<main>
+    <div>
         <h1>Edit Category</h1>
-        
-        <?php if ($errorMessage): ?>
-            <div class="error-message"><?= htmlspecialchars($errorMessage) ?></div>
-        <?php endif; ?>
-        
-        <?php if ($successMessage): ?>
-            <div class="success-message"><?= htmlspecialchars($successMessage) ?></div>
-        <?php endif; ?>
-        
-        <form method="POST" class="admin-form">
-            <label for="name">Category Name:</label>
-            <input type="text" id="name" name="name" required>
-
-            
-            <div class="form-buttons">
-                <button type="submit">Update Category</button>
-                <a href="adminCategories.php" class="button">Cancel</a>
-            </div>
-        </form>
-    </main>
+    </div>
     
-    <?php require __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
+    <?php if ($errorNotification): ?>
+        <div><?= htmlspecialchars($errorNotification) ?></div>
+    <?php endif; ?>
+    
+    <form method="POST">
+        <div>
+            <label for="categoryName">Category Name:</label>
+            <input type="text" id="categoryName" name="categoryName" required
+                   value="<?= htmlspecialchars($categoryData['name']) ?>">
+        </div>
+        
+        <div>
+            <button type="submit">Update Category</button>
+            <a href="adminCategories.php">Cancel</a>
+        </div>
+    </form>
+</main>
+
+<?php require __DIR__ . '/../includes/footer.php'; ?>
 

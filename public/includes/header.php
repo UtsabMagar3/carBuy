@@ -27,7 +27,7 @@ $navCategories = $datapageConnection->query('
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Carbuy Auctions</title>
+    <title><?php echo isset($pageTitle) ? $pageTitle : 'Carbuy'; ?></title>
     <link rel="stylesheet" href="/css/carbuy.css" />
 </head>
 

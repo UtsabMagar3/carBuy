@@ -8,76 +8,67 @@ if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     exit();
 }
 
-// Fetch summary data - removed bid count query
-$categoryCount = $datapageConnection->query('SELECT COUNT(*) FROM categories')->fetchColumn();
-$userCount = $datapageConnection->query('SELECT COUNT(*) FROM users')->fetchColumn();
-$auctionCount = $datapageConnection->query('SELECT COUNT(*) FROM auctions')->fetchColumn();
-// Removed bid count query
+// Fetch summary data
+$totalCategories = $datapageConnection->query('SELECT COUNT(*) FROM categories')->fetchColumn();
+$totalUsers = $datapageConnection->query('SELECT COUNT(*) FROM users')->fetchColumn();
+$totalAuctions = $datapageConnection->query('SELECT COUNT(*) FROM auctions')->fetchColumn();
+
+$pageTitle = 'Admin Dashboard - Carbuy';
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin Dashboard - Carbuy</title>
-    <link rel="stylesheet" href="/css/carbuy.css">
-</head>
-<body>
-    <?php require __DIR__ . '/../includes/header.php'; ?>
+
+<?php require __DIR__ . '/../includes/header.php'; ?>
     
-    <main class="admin-dashboard">
-        <div class="dashboard-header">
+    <main>
+        <div>
             <h1>Admin Dashboard</h1>
-            <div class="admin-profile">
+            <div>
                 <span>Welcome, <?= htmlspecialchars($_SESSION['admin_name']) ?></span>
             </div>
         </div>
         
-        <div class="dashboard-stats">
-            <div class="stat-card">
+        <div>
+            <div>
                 <h3>Categories</h3>
-                <p><?= $categoryCount ?></p>
-                <a href="adminCategories.php" class="button">Manage Categories</a>
+                <p><?= $totalCategories ?></p>
+                <a href="adminCategories.php">Manage Categories</a>
             </div>
             
-            <div class="stat-card">
+            <div>
                 <h3>Users</h3>
-                <p><?= $userCount ?></p>
-                <a href="manageUsers.php" class="button">Manage Users</a>
+                <p><?= $totalUsers ?></p>
+                <a href="manageUsers.php">Manage Users</a>
             </div>
             
-            <div class="stat-card">
+            <div>
                 <h3>Active Auctions</h3>
-                <p><?= $auctionCount ?></p>
-                <a href="manageAuctions.php" class="button">Manage Auctions</a>
+                <p><?= $totalAuctions ?></p>
+                <a href="manageAuctions.php">Manage Auctions</a>
             </div>
-            
-            <!-- Removed the entire bid statistics card -->
         </div>
 
         <?php if ($_SESSION['is_super_admin']): ?>
-        <div class="admin-actions">
+        <div>
             <h2>Administrative Actions</h2>
-            <a href="manageAdmins.php" class="button">Manage Administrators</a>
+            <a href="manageAdmins.php">Manage Administrators</a>
         </div>
         <?php endif; ?>
 
-        <div class="account-actions">
-            <div class="account-buttons">
-                <form method="POST" action="/admin/switchAdmin.php" class="account-form">
-                    <button type="submit" class="switch-account-button">Switch Account</button>
+        <div>
+            <div>
+                <form method="POST" action="/admin/switchAdmin.php">
+                    <button type="submit">Switch Account</button>
                 </form>
                 
                 <?php if (!isset($_SESSION['is_super_admin']) || !$_SESSION['is_super_admin']): ?>
-                    <form method="POST" action="/admin/deleteAdminAccount.php" class="account-form"
+                    <form method="POST" action="/admin/deleteAdminAccount.php"
                           onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
                         <input type="hidden" name="admin_id" value="<?= $_SESSION['admin_id'] ?>">
-                        <button type="submit" class="delete-account-button">Delete Account</button>
+                        <button type="submit">Delete Account</button>
                     </form>
                 <?php endif; ?>
             </div>
         </div>
     </main>
 
-    <?php require __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

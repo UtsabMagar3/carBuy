@@ -10,13 +10,13 @@ if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
 
 // Handle user deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
-    $userId = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
-    if ($userId) {
-        $deleteQuery = $datapageConnection->prepare('DELETE FROM users WHERE id = :id');
-        if ($deleteQuery->execute(['id' => $userId])) {
-            $_SESSION['success'] = 'User deleted successfully.';
+    $userIdentifier = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
+    if ($userIdentifier) {
+        $deleteUserQuery = $datapageConnection->prepare('DELETE FROM users WHERE id = :id');
+        if ($deleteUserQuery->execute(['id' => $userIdentifier])) {
+            $_SESSION['successNotification'] = 'User deleted successfully.';
         } else {
-            $_SESSION['error'] = 'Could not delete user.';
+            $_SESSION['errorNotification'] = 'Could not delete user.';
         }
         header('Location: manageUsers.php');
         exit();
@@ -24,14 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
 }
 
 // Get session messages
-$errorMessage = isset($_SESSION['error']) ? $_SESSION['error'] : '';
-$successMessage = isset($_SESSION['success']) ? $_SESSION['success'] : '';
+$errorNotification = isset($_SESSION['errorNotification']) ? $_SESSION['errorNotification'] : '';
+$successNotification = isset($_SESSION['successNotification']) ? $_SESSION['successNotification'] : '';
 
 // Clear session messages
-unset($_SESSION['error'], $_SESSION['success']);
+unset($_SESSION['errorNotification'], $_SESSION['successNotification']);
 
 // Fetch users with their statistics
-$stmt = $datapageConnection->query('
+$usersQuery = $datapageConnection->query('
     SELECT u.*, 
            COUNT(DISTINCT a.id) as auction_count,
            COUNT(DISTINCT b.id) as bid_count,
@@ -43,17 +43,12 @@ $stmt = $datapageConnection->query('
     GROUP BY u.id
     ORDER BY u.name
 ');
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$usersList = $usersQuery->fetchAll(PDO::FETCH_ASSOC);
+
+$pageTitle = 'Manage Users - Admin Dashboard';
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manage Users - Admin Dashboard</title>
-    <link rel="stylesheet" href="/css/carbuy.css">
-</head>
-<body>
-    <?php require __DIR__ . '/../includes/header.php'; ?>
+<?php require __DIR__ . '/../includes/header.php'; ?>
     
     <main>
         <div class="dashboard-header">
@@ -61,11 +56,11 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <a href="adminDashboard.php" class="back-button">Back to Dashboard</a>
         </div>
 
-        <?php if ($errorMessage): ?>
-            <div class="error-message"><?= htmlspecialchars($errorMessage) ?></div>
+        <?php if ($errorNotification): ?>
+            <div class="error-message"><?= htmlspecialchars($errorNotification) ?></div>
         <?php endif; ?>
-        <?php if ($successMessage): ?>
-            <div class="success-message"><?= htmlspecialchars($successMessage) ?></div>
+        <?php if ($successNotification): ?>
+            <div class="success-message"><?= htmlspecialchars($successNotification) ?></div>
         <?php endif; ?>
 
         <table class="admin-table">
@@ -80,17 +75,17 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($users as $user): ?>
+                <?php foreach ($usersList as $userAccount): ?>
                 <tr>
-                    <td><?= htmlspecialchars($user['name']) ?></td>
-                    <td><?= htmlspecialchars($user['email']) ?></td>
-                    <td><?= $user['auction_count'] ?></td>
-                    <td><?= $user['bid_count'] ?></td>
-                    <td><?= $user['review_count'] ?></td>
+                    <td><?= htmlspecialchars($userAccount['name']) ?></td>
+                    <td><?= htmlspecialchars($userAccount['email']) ?></td>
+                    <td><?= $userAccount['auction_count'] ?></td>
+                    <td><?= $userAccount['bid_count'] ?></td>
+                    <td><?= $userAccount['review_count'] ?></td>
                     <td>
                         <form method="POST" class="delete-form" 
                               onsubmit="return confirm('Are you sure you want to delete this user?');">
-                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                            <input type="hidden" name="user_id" value="<?= $userAccount['id'] ?>">
                             <button type="submit" name="delete_user" class="delete-button">Delete</button>
                         </form>
                     </td>
@@ -100,6 +95,4 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </table>
     </main>
 
-    <?php require __DIR__ . '/../includes/footer.php'; ?>
-</body>
-</html>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

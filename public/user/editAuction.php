@@ -110,16 +110,17 @@ $categories = [
     ['id' => 7, 'name' => 'Hybrid'],
 ];
 
+$pageTitle = 'Edit Auction';
 require __DIR__ . '/../includes/header.php';
 ?>
 
-<main class="edit-auction-page">
-    <div class="page-header">
+<main>
+    <div>
         <h1>Edit Auction</h1>
     </div>
 
     <?php if ($errorMessage): ?>
-        <div class="error-message"><?= htmlspecialchars($errorMessage) ?></div>
+        <div><?= htmlspecialchars($errorMessage) ?></div>
     <?php endif; ?>
 
     <form action="editAuction.php?id=<?= $auctionId ?>&from=<?= $referrer ?>" method="POST" enctype="multipart/form-data">
@@ -149,9 +150,9 @@ require __DIR__ . '/../includes/header.php';
             <p>Current Image: <img src="<?= htmlspecialchars($auction['image']) ?>" alt="Auction Image" style="max-width: 200px;"></p>
         <?php endif; ?>
 
-        <div class="form-buttons">
+        <div>
             <button type="submit">Update Auction</button>
-            <a href="/auction/auction.php?id=<?= $auctionId ?>" class="cancel-button">Cancel</a>
+            <a href="/auction/auction.php?id=<?= $auctionId ?>">Cancel</a>
         </div>
     </form>
 </main>

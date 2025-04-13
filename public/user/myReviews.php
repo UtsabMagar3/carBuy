@@ -9,15 +9,16 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Fetch reviews for the current user
-$userId = $_SESSION['user_id'];
-$reviews = $datapageConnection->query("
-    SELECT r.*, u.name as reviewer_name 
+$currentUserId = $_SESSION['user_id'];
+$userReviews = $datapageConnection->query("
+    SELECT r.*, u.name as reviewerName 
     FROM reviews r
     JOIN users u ON r.reviewerId = u.id
-    WHERE r.reviewedUserId = $userId
+    WHERE r.reviewedUserId = $currentUserId
     ORDER BY r.reviewDate DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
+$pageTitle = 'My Reviews - Carbuy';
 require '../includes/header.php';
 ?>
 
@@ -27,22 +28,22 @@ require '../includes/header.php';
         <a href="/user/userProfile.php" class="back-button">Back to Profile</a>
     </div>
 
-    <?php if (empty($reviews)): ?>
+    <?php if (empty($userReviews)): ?>
         <div class="no-reviews">
             <p>You haven't received any reviews yet.</p>
         </div>
     <?php else: ?>
         <div class="reviews-list">
-            <?php foreach ($reviews as $review): ?>
+            <?php foreach ($userReviews as $reviewItem): ?>
                 <div class="review-card">
                     <div class="review-header">
-                        <span class="reviewer-name"><?= $review['reviewer_name'] ?></span>
+                        <span class="reviewer-name"><?= $reviewItem['reviewerName'] ?></span>
                         <span class="review-date">
-                            <?= date('M j, Y', strtotime($review['reviewDate'])) ?>
+                            <?= date('M j, Y', strtotime($reviewItem['reviewDate'])) ?>
                         </span>
                     </div>
                     <div class="review-content">
-                        <p><?= nl2br($review['reviewText']) ?></p>
+                        <p><?= nl2br($reviewItem['reviewText']) ?></p>
                     </div>
                 </div>
             <?php endforeach; ?>
